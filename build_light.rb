@@ -1,17 +1,43 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'sinatra'
+require 'lifx'
+require 'json'
 
 class Signaler
-  def foo
-    "bar"
+  attr_reader :client
+
+  def initialize(client)
+    @client = client
+  end
+
+  def signal(params)
+    client.discover!
+
+    if params[:status]
+      client.lights.first.set_color(LIFX::Color.green, duration: 2)
+      "signaled success"
+    else
+      light = client.lights.first
+      blink(light, LIFX::Color.red, LIFX::Color.white)
+      "signaled failure"
+    end
+  end
+
+  def blink(light, start_color, end_color)
+      5.times do
+        light.set_color(start_color, duration: 0)
+        light.set_color(end_color, duration: 0)
+      end
   end
 end
 
 post '/signal' do
-  signaler = Signaler.new
-  res = signaler.foo
+  payload = JSON.parse(request.body.read)
 
-  [200, res]
+  signaler = Signaler.new(LIFX::Client.lan)
+  signal = signaler.signal(:status => payload["status"])
+
+  [200, signal]
 end
 

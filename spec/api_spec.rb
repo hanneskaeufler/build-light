@@ -1,4 +1,5 @@
 require 'rack/test'
+require 'json'
 require_relative '../build_light'
 
 describe 'api' do
@@ -16,25 +17,50 @@ describe 'api' do
     end
 
     it 'yields 200 status' do
-      allow(signaler).to receive(:foo)
+      allow(signaler).to receive(:signal)
 
-      post '/signal'
+      post '/signal', { :status => false }.to_json
 
       expect(last_response).to be_ok
     end
 
-    it 'tells the signaler to signal' do
-      expect(signaler).to receive(:foo)
+    it 'tells the signaler to signal and reports on what it did' do
+      expect(signaler).to receive(:signal).
+        with({ :status => false }).
+        and_return('success')
 
-      post '/signal'
-    end
-
-    it 'reports on what it did' do
-      allow(signaler).to receive(:foo).and_return('success')
-
-      post '/signal'
+      post '/signal', { :status => false }.to_json
 
       expect(last_response.body).to match(/success/)
+    end
+  end
+end
+
+describe Signaler do
+  describe '#signal' do
+    let(:client) { instance_double('LIFX::Client') }
+
+    it 'blinks the color to red on the first light' do
+      light = double('LIFX::Light')
+      allow(client).to receive(:discover!)
+
+      expect(client).to receive(:lights).and_return([light])
+      expect(light).to receive(:set_color).with(LIFX::Color.red, duration: 0).exactly(5).times
+      expect(light).to receive(:set_color).with(LIFX::Color.white, duration: 0).exactly(5).times
+
+      signal = Signaler.new(client).signal(:status => false)
+      expect(signal).to eql("signaled failure")
+    end
+
+    it 'sets the color to green on the first light' do
+      light = double('LIFX::Light')
+      allow(client).to receive(:discover!)
+
+      expect(client).to receive(:lights).and_return([light])
+      expect(light).to receive(:set_color).with(LIFX::Color.green, duration: 2)
+
+      signal = Signaler.new(client).signal(:status => true)
+      expect(signal).to eql("signaled success")
     end
   end
 end

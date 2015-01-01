@@ -14,7 +14,7 @@ class Signaler
   def signal(params)
     client.discover!
 
-    if params[:status]
+    if params[:build_status] == 'successful'
       client.lights.first.set_color(LIFX::Color.green, duration: 2)
       "signaled success"
     else
@@ -36,7 +36,7 @@ post '/signal' do
   payload = JSON.parse(request.body.read)
 
   signaler = Signaler.new(LIFX::Client.lan)
-  signal = signaler.signal(:status => payload["status"])
+  signal = signaler.signal(:build_status => payload["build_status"])
 
   [200, signal]
 end

@@ -22,17 +22,17 @@ describe 'api' do
     it 'yields 200 status' do
       allow(signaler).to receive(:signal)
 
-      post '/signal', { :status => false }.to_json
+      post '/signal', { :build_status => 'failed' }.to_json
 
       expect(last_response).to be_ok
     end
 
     it 'tells the signaler to signal and reports on what it did' do
       expect(signaler).to receive(:signal).
-        with({ :status => false }).
+        with({ :build_status => 'successful' }).
         and_return('success')
 
-      post '/signal', { :status => false }.to_json
+      post '/signal', { :build_status => 'successful' }.to_json
 
       expect(last_response.body).to match(/success/)
     end
@@ -51,7 +51,7 @@ describe Signaler do
       expect(light).to receive(:set_color).with(LIFX::Color.red, duration: 0).exactly(5).times
       expect(light).to receive(:set_color).with(LIFX::Color.white, duration: 0).exactly(5).times
 
-      signal = Signaler.new(client).signal(:status => false)
+      signal = Signaler.new(client).signal(:build_status => 'failed')
       expect(signal).to eql("signaled failure")
     end
 
@@ -62,7 +62,7 @@ describe Signaler do
       expect(client).to receive(:lights).and_return([light])
       expect(light).to receive(:set_color).with(LIFX::Color.green, duration: 2)
 
-      signal = Signaler.new(client).signal(:status => true)
+      signal = Signaler.new(client).signal(:build_status => 'successful')
       expect(signal).to eql("signaled success")
     end
   end

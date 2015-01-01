@@ -9,3 +9,4 @@ gem 'json'
 
 gem 'rspec'
 gem 'rack-test'
+gem 'codeclimate-test-reporter'
